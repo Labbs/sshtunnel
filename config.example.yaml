@@ -1,0 +1,149 @@
+# SSH Tunnel Manager Configuration
+# Copy this file to ~/.config/sshtunnel/config.yaml
+
+global:
+  log_level: info  # debug, info, warn, error
+  log_file: ""     # Leave empty to disable file logging
+
+  # Auto-reconnection settings
+  reconnect:
+    enabled: true
+    max_attempts: 5        # 0 = unlimited attempts
+    initial_delay: 1s      # Initial delay before first reconnect attempt
+    max_delay: 60s         # Maximum delay between reconnect attempts
+    backoff_multiplier: 2.0  # Multiplier for exponential backoff
+
+  # SSH keep-alive settings
+  keep_alive:
+    enabled: true
+    interval: 30s          # How often to send keep-alive packets
+    timeout: 15s           # Timeout for keep-alive response
+
+# SSH hosts (reusable host definitions)
+hosts:
+  # Simple bastion host example
+  bastion-prod:
+    hostname: bastion.example.com
+    port: 22
+    user: deploy
+    identity_file: ~/.ssh/id_ed25519
+    agent_forwarding: false
+    # Optional SSH options
+    # options:
+    #   StrictHostKeyChecking: accept-new
+
+  # Another host for staging
+  bastion-staging:
+    hostname: staging.example.com
+    port: 22
+    user: deploy
+    identity_file: ~/.ssh/id_rsa
+
+  # Host using jump/bastion (ProxyJump)
+  internal-server:
+    hostname: internal.private
+    port: 22
+    user: admin
+    identity_file: ~/.ssh/id_ed25519
+    jump_host: bastion-prod  # Will connect through bastion-prod first
+
+# Tunnel definitions
+tunnels:
+  # Local port forwarding (-L)
+  # Access remote service on local port
+  - name: postgres-prod
+    description: "PostgreSQL production database"
+    host: bastion-prod
+    type: local
+    local:
+      address: 127.0.0.1
+      port: 5432
+    remote:
+      address: db-prod.internal
+      port: 5432
+    auto_start: true
+    auto_reconnect: true
+
+  - name: redis-prod
+    description: "Redis cache production"
+    host: bastion-prod
+    type: local
+    local:
+      address: 127.0.0.1
+      port: 6379
+    remote:
+      address: redis.internal
+      port: 6379
+    auto_start: true
+
+  - name: api-staging
+    description: "API staging environment"
+    host: bastion-staging
+    type: local
+    local:
+      address: 127.0.0.1
+      port: 8080
+    remote:
+      address: api.internal
+      port: 8080
+    auto_start: false
+
+  # Remote port forwarding (-R)
+  # Expose local service on remote server
+  - name: expose-metrics
+    description: "Expose local Prometheus metrics"
+    host: bastion-prod
+    type: remote
+    local:
+      address: 127.0.0.1
+      port: 9090
+    remote:
+      address: 0.0.0.0       # Listen on all interfaces on remote
+      port: 9090
+    auto_start: false
+
+  # Dynamic SOCKS5 proxy (-D)
+  # Route all traffic through the SSH connection
+  - name: socks-proxy
+    description: "SOCKS5 proxy through bastion"
+    host: bastion-prod
+    type: dynamic
+    local:
+      address: 127.0.0.1
+      port: 1080
+    auto_start: false
+
+  # Tunnel through jump host
+  - name: internal-mysql
+    description: "MySQL on internal network via jump"
+    host: internal-server    # Uses jump_host defined above
+    type: local
+    local:
+      address: 127.0.0.1
+      port: 3306
+    remote:
+      address: mysql.internal
+      port: 3306
+    auto_start: false
+
+# Tunnel groups for batch operations
+groups:
+  - name: production
+    description: "All production tunnels"
+    tunnels:
+      - postgres-prod
+      - redis-prod
+    auto_start: false
+
+  - name: development
+    description: "Development environment"
+    tunnels:
+      - api-staging
+      - socks-proxy
+    auto_start: false
+
+  - name: internal
+    description: "Internal network access"
+    tunnels:
+      - internal-mysql
+    auto_start: false
