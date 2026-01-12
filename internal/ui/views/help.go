@@ -74,8 +74,14 @@ func (v *HelpView) View() string {
 	var b strings.Builder
 
 	// Header
+	headerLeft := "  Help"
+	headerRight := "[Esc] Back"
+	headerPadding := v.width - len(headerLeft) - len(headerRight)
+	if headerPadding < 2 {
+		headerPadding = 2
+	}
 	header := styles.HeaderStyle.Width(v.width).Render(
-		"  Help                                                       [Esc] Back")
+		headerLeft + strings.Repeat(" ", headerPadding) + headerRight)
 	b.WriteString(header)
 	b.WriteString("\n\n")
 
@@ -99,15 +105,12 @@ func (v *HelpView) View() string {
 	b.WriteString(styles.SectionHeaderStyle.Render("  VIEWS"))
 	b.WriteString("\n")
 	b.WriteString(v.renderKeyBinding("g", "Groups view"))
-	b.WriteString(v.renderKeyBinding("l", "Logs view (selected tunnel)"))
-	b.WriteString(v.renderKeyBinding("d", "Details view (selected tunnel)"))
 	b.WriteString(v.renderKeyBinding("?", "This help screen"))
 	b.WriteString("\n")
 
 	// Other section
 	b.WriteString(styles.SectionHeaderStyle.Render("  OTHER"))
 	b.WriteString("\n")
-	b.WriteString(v.renderKeyBinding("/", "Search/filter tunnels"))
 	b.WriteString(v.renderKeyBinding("Esc", "Go back / Cancel"))
 	b.WriteString(v.renderKeyBinding("q/Ctrl+C", "Quit application"))
 	b.WriteString("\n")

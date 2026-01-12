@@ -91,8 +91,8 @@ func (t *TunnelItem) Render() string {
 		errMsg := "Unknown error"
 		if err := t.tunnel.Error(); err != nil {
 			errMsg = err.Error()
-			if len(errMsg) > 50 {
-				errMsg = errMsg[:50] + "..."
+			if len([]rune(errMsg)) > 50 {
+				errMsg = string([]rune(errMsg)[:50]) + "..."
 			}
 		}
 		line2 = styles.ErrorStyle.Render(fmt.Sprintf("    Error: %s", errMsg))

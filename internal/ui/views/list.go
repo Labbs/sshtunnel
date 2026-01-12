@@ -22,10 +22,7 @@ type ListKeyMap struct {
 	StartAll key.Binding
 	StopAll  key.Binding
 	Groups   key.Binding
-	Logs     key.Binding
-	Details  key.Binding
 	Reload   key.Binding
-	Search   key.Binding
 	Help     key.Binding
 	Quit     key.Binding
 }
@@ -57,21 +54,9 @@ func DefaultListKeyMap() ListKeyMap {
 			key.WithKeys("g"),
 			key.WithHelp("g", "groups"),
 		),
-		Logs: key.NewBinding(
-			key.WithKeys("l"),
-			key.WithHelp("l", "logs"),
-		),
-		Details: key.NewBinding(
-			key.WithKeys("d"),
-			key.WithHelp("d", "details"),
-		),
 		Reload: key.NewBinding(
 			key.WithKeys("r"),
 			key.WithHelp("r", "reload"),
-		),
-		Search: key.NewBinding(
-			key.WithKeys("/"),
-			key.WithHelp("/", "search"),
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
@@ -154,7 +139,14 @@ func (v *ListView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		v.statusBar.SetWidth(msg.Width)
 
 	case messages.TickMsg:
-		// Just refresh the view
+		// Validate cursor bounds after potential filter changes
+		tunnels := v.getFilteredTunnels()
+		if v.cursor >= len(tunnels) {
+			v.cursor = len(tunnels) - 1
+		}
+		if v.cursor < 0 {
+			v.cursor = 0
+		}
 		return v, nil
 	}
 
@@ -172,15 +164,27 @@ func (v *ListView) View() string {
 	var b strings.Builder
 
 	// Header
+	headerLeft := "  SSH Tunnel Manager"
+	headerRight := "[?] Help  [q] Quit"
+	headerPadding := width - len(headerLeft) - len(headerRight)
+	if headerPadding < 2 {
+		headerPadding = 2
+	}
 	header := styles.HeaderStyle.Width(width).Render(
-		fmt.Sprintf("  SSH Tunnel Manager                                    [?] Help  [q] Quit"))
+		headerLeft + strings.Repeat(" ", headerPadding) + headerRight)
 	b.WriteString(header)
 	b.WriteString("\n\n")
 
 	// Tunnel count
 	running, total, _, _ := v.manager.GetStats()
+	tunnelLeft := "  TUNNELS"
+	tunnelRight := fmt.Sprintf("%d active / %d", running, total)
+	tunnelPadding := width - len(tunnelLeft) - len(tunnelRight) - 2
+	if tunnelPadding < 2 {
+		tunnelPadding = 2
+	}
 	countStr := styles.SectionHeaderStyle.Render(
-		fmt.Sprintf("  TUNNELS                                          %d active / %d", running, total))
+		tunnelLeft + strings.Repeat(" ", tunnelPadding) + tunnelRight)
 	b.WriteString(countStr)
 	b.WriteString("\n")
 
@@ -266,7 +270,6 @@ func (v *ListView) renderHelpLine() string {
 		{"a", "Start All"},
 		{"s", "Stop All"},
 		{"g", "Groups"},
-		{"l", "Logs"},
 		{"r", "Reload"},
 		{"?", "Help"},
 	}

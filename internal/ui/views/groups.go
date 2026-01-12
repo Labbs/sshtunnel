@@ -126,8 +126,14 @@ func (v *GroupsView) View() string {
 	var b strings.Builder
 
 	// Header
+	headerLeft := "  Groups"
+	headerRight := "[Esc] Back"
+	headerPadding := v.width - len(headerLeft) - len(headerRight)
+	if headerPadding < 2 {
+		headerPadding = 2
+	}
 	header := styles.HeaderStyle.Width(v.width).Render(
-		"  Groups                                                     [Esc] Back")
+		headerLeft + strings.Repeat(" ", headerPadding) + headerRight)
 	b.WriteString(header)
 	b.WriteString("\n\n")
 
@@ -165,7 +171,7 @@ func (v *GroupsView) View() string {
 		// Tunnels in group
 		tunnelList := strings.Join(group.Tunnels, ", ")
 		if len(tunnelList) > 60 {
-			tunnelList = tunnelList[:57] + "..."
+			tunnelList = truncateString(tunnelList, 57) + "..."
 		}
 		tunnelsLine := styles.MutedStyle.Render("  Tunnels: " + tunnelList)
 
@@ -229,4 +235,13 @@ func (v *GroupsView) stopGroup(name string) tea.Cmd {
 		v.manager.StopGroup(name)
 		return messages.RefreshMsg{}
 	}
+}
+
+// truncateString truncates a string to maxLen runes, preserving UTF-8 characters.
+func truncateString(s string, maxLen int) string {
+	runes := []rune(s)
+	if len(runes) <= maxLen {
+		return s
+	}
+	return string(runes[:maxLen])
 }
