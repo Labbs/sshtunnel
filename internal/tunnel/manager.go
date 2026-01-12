@@ -303,14 +303,17 @@ func (m *Manager) Reload(newConfig *config.Config) error {
 	// Recreate tunnels
 	m.tunnels = make(map[string]Tunnel)
 
+	var errs []error
 	for _, tunnelCfg := range m.config.Tunnels {
 		hostConfig, ok := m.config.Hosts[tunnelCfg.Host]
 		if !ok {
+			errs = append(errs, fmt.Errorf("tunnel %q: host %q not found", tunnelCfg.Name, tunnelCfg.Host))
 			continue
 		}
 
 		tunnel, err := NewTunnel(tunnelCfg, hostConfig, m.config.Hosts, m.keepAlive)
 		if err != nil {
+			errs = append(errs, fmt.Errorf("tunnel %q: %w", tunnelCfg.Name, err))
 			continue
 		}
 
@@ -320,6 +323,10 @@ func (m *Manager) Reload(newConfig *config.Config) error {
 		if oldStatus[tunnelCfg.Name] {
 			tunnel.Start(m.ctx)
 		}
+	}
+
+	if len(errs) > 0 {
+		return fmt.Errorf("failed to reload %d tunnel(s): %v", len(errs), errs)
 	}
 
 	return nil
