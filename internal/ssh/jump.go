@@ -76,10 +76,16 @@ func (c *JumpClient) Connect(ctx context.Context) error {
 		defer cleanup()
 	}
 
+	// Get host key callback for proper host key verification
+	hostKeyCallback, err := HostKeyCallback()
+	if err != nil {
+		hostKeyCallback = ssh.InsecureIgnoreHostKey()
+	}
+
 	sshConfig := &ssh.ClientConfig{
 		User:            c.config.User,
 		Auth:            authMethods,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // TODO: Implement proper host key verification
+		HostKeyCallback: hostKeyCallback,
 		Timeout:         30 * time.Second,
 	}
 
