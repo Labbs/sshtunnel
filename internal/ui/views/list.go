@@ -98,19 +98,25 @@ func (v *ListView) Init() tea.Cmd {
 func (v *ListView) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
+		// Normalize cursor bounds before handling any key
+		tunnels := v.getFilteredTunnels()
+		if len(tunnels) == 0 {
+			v.cursor = 0
+		} else if v.cursor >= len(tunnels) {
+			v.cursor = len(tunnels) - 1
+		}
+
 		switch {
 		case key.Matches(msg, v.keyMap.Up):
 			if v.cursor > 0 {
 				v.cursor--
 			}
 		case key.Matches(msg, v.keyMap.Down):
-			tunnels := v.getFilteredTunnels()
 			if v.cursor < len(tunnels)-1 {
 				v.cursor++
 			}
 		case key.Matches(msg, v.keyMap.Toggle):
-			tunnels := v.getFilteredTunnels()
-			if v.cursor < len(tunnels) {
+			if len(tunnels) > 0 && v.cursor < len(tunnels) {
 				return v, v.toggleTunnel(tunnels[v.cursor].Name())
 			}
 		case key.Matches(msg, v.keyMap.StartAll):
