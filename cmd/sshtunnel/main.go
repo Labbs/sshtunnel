@@ -67,6 +67,7 @@ func main() {
 	// Start auto-start tunnels
 	if err := manager.StartAutoStart(); err != nil {
 		fmt.Fprintf(os.Stderr, "Error starting auto-start tunnels: %v\n", err)
+		os.Exit(1)
 	}
 
 	// Run cleanup on exit
